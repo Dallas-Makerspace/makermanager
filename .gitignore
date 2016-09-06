@@ -1,0 +1,5 @@
+**/.DS_Store
+/vendor/*
+/config/app.php
+/tmp/*
+/logs/*

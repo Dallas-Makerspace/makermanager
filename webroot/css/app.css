@@ -1,0 +1,12 @@
+body {
+  margin-top: 80px;
+  margin-bottom: 30px;
+}
+
+.navbar-inverse {
+  background-color: #0b9cc9;
+}
+
+.navbar-inverse .navbar-nav > li > a:hover, .navbar-inverse .navbar-nav > li > a:focus {
+  background-color: #0b71c9;
+}
