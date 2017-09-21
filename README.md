@@ -1,4 +1,4 @@
-# Maker Manager [![Build Status](https://travis-ci.org/Dallas-Makerspace/calendar.svg?branch=master)](https://travis-ci.org/Dallas-Makerspace/calendar) [![License](https://img.shields.io/packagist/l/cakephp/app.svg?style=flat-square)](https://packagist.org/packages/cakephp/app)
+# Maker Manager [![Build Status](https://travis-ci.org/Dallas-Makerspace/makermanager.svg?branch=master)](https://travis-ci.org/Dallas-Makerspace/makermanager) [![License](https://img.shields.io/packagist/l/cakephp/app.svg?style=flat-square)](https://packagist.org/packages/cakephp/app)
 
 A skeleton for creating applications with [CakePHP](http://cakephp.org) 3.x.
 
