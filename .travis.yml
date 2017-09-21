@@ -16,6 +16,17 @@ before_script:
 script:
   - sh -c "vendor/bin/phpcs -p --extensions=php --standard=vendor/cakephp/cakephp-codesniffer/CakePHP ./src ./tests ./config ./webroot"
 
+
+after_success:
+  - docker --version  # document the version travis is using
+  - pip install --user awscli # install aws cli w/o sudo
+  - export PATH=$PATH:$HOME/.local/bin # put aws in the path
+  - eval $(aws ecr get-login --region us-east-1) #needs AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY envvars
+  - docker build -t makermanager .
+  - docker tag makermanager:latest $ECR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/makermanager:build-$TRAVIS_BUILD_NUMBER
+  - docker push $ECR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/makermanager:build-$TRAVIS_BUILD_NUMBER
+  
+
 notifications:
   email:
     on_success: never
