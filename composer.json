@@ -1,7 +1,7 @@
 {
-    "name": "cakephp/app",
-    "description": "CakePHP skeleton app",
-    "homepage": "http://cakephp.org",
+    "name": "Dallas-Makerspace/makermanager",
+    "description": "DMS Membership Management System",
+    "homepage": "http://accounts.dallasmakerspace.org",
     "type": "project",
     "license": "MIT",
     "require": {
@@ -14,6 +14,7 @@
         "muffin/footprint": "dev-master",
         "ceeram/cakephp-blame": "~1.0",
         "syntaxera/cakephp-sparkpost-plugin": "^0.4.5",
+        "php-coveralls/phpcoveralls": "~1.0",
         "friendsofcake/cakephp-csvview": "~2.0"
     },
     "require-dev": {
