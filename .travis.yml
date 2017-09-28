@@ -12,6 +12,7 @@ before_install:
 install:
   - curl -s http://getcomposer.org/installer | php
   - php composer.phar install --dev --no-interaction
+  - pip install --user awscli # install aws cli w/o sudo
 
 before_script:
   - sh -c "composer require 'cakephp/cakephp-codesniffer:dev-master'"
@@ -25,13 +26,18 @@ script:
 after_success:
   - travis_retry php vendor/bin/coveralls
   - travis_retry php vendor/bin/coveralls -v
-  - docker --version  # document the version travis is using
-  - pip install --user awscli # install aws cli w/o sudo
-  - export PATH=$PATH:$HOME/.local/bin # put aws in the path
-  - eval $(aws ecr get-login --region us-east-1) #needs AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY envvars
-  - docker build -t makermanager .
-  - docker tag makermanager:latest $ECR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/makermanager:build-$TRAVIS_BUILD_NUMBER
-  - docker push $ECR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/makermanager:build-$TRAVIS_BUILD_NUMBER
+
+deploy:
+  # deploy master to production
+  - provider: script
+    script:
+      - export PATH=$PATH:$HOME/.local/bin # put aws in the path
+      - eval $(aws ecr get-login) #needs AWS_ACCESS_KEY_ID, aws_default_region, and AWS_SECRET_ACCESS_KEY envvars
+      - docker build -t makermanager .
+      - docker tag makermanager:latest $ECR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/makermanager:build-$TRAVIS_BUILD_NUMBER
+      - docker push $ECR_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/makermanager:build-$TRAVIS_BUILD_NUMBER
+    on:
+      branch: master
 
 notifications:
   email:
