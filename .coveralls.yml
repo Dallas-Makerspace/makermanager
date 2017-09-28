@@ -1,1 +1,6 @@
 repo_token: tQPQ9mZNfZu8xPKs77MoThFBXWKCJUOn1
+service_name: travis-ci
+
+# for php-coveralls
+coverage_clover: build/logs/clover.xml
+json_path: build/logs/coveralls-upload.json
