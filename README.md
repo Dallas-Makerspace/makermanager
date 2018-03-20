@@ -1,10 +1,5 @@
-# Maker Manager [![Build Status](https://travis-ci.org/Dallas-Makerspace/makermanager.svg?branch=master)](https://travis-ci.org/Dallas-Makerspace/makermanager) [![License](https://img.shields.io/github/license/Dallas-Makerspace/makermanager.svg?style=flat-square)](https://packagist.org/packages/cakephp/app) [![Coverage Status](https://coveralls.io/repos/github/Dallas-Makerspace/makermanager/badge.svg?branch=master)](https://coveralls.io/github/Dallas-Makerspace/makermanager?branch=master)
+# Maker Manager [![Build Status](https://travis-ci.org/Dallas-Makerspace/makermanager.svg?branch=master)](https://travis-ci.org/Dallas-Makerspace/makermanager) [![License](https://img.shields.io/github/license/Dallas-Makerspace/makermanager.svg?style=flat-square)](https://github.com/Dallas-Makerspace/makermanager/blob/master/LICENCE) [![Coverage Status](https://coveralls.io/repos/github/Dallas-Makerspace/makermanager/badge.svg?branch=master)](https://coveralls.io/github/Dallas-Makerspace/makermanager?branch=master)
 [![Release](https://img.shields.io/github/tag/Dallas-Makerspace/makermanager.svg?style=flat-square)](https://github.com/Dallas-Makerspace/makermanager/tags)
-
-
-A skeleton for creating applications with [CakePHP](http://cakephp.org) 3.x.
-
-The framework source code can be found here: [cakephp/cakephp](https://github.com/cakephp/cakephp).
 
 Find a copy of the latest build at [Docker Hub](https://hub.docker.com/r/dallasmakerspace/makermanager/).
 
