@@ -99,12 +99,12 @@ class EndpointsController extends AppController {
       ->where(['whmcs_user_id' => $this->request->data['userid']])
       ->first();
       
-    if (empty($existing_user)) {
+    if (empty($existing_user)) {    
       $user = $usersTable->newEntity();
       $user_data = [
         'first_name' => $this->request->data['firstname'],
         'last_name' => $this->request->data['lastname'],
-        'username' => strtolower($this->request->data['customfields'][2]),
+        'username' => strtolower($this->request->data['username']),
         'email' => $this->request->data['email'],
         'phone' => $this->request->data['phonenumber'],
         'address_1' => $this->request->data['address1'],
