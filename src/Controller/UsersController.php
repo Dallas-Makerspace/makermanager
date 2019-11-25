@@ -12,13 +12,13 @@ class UsersController extends AppController {
     parent::beforeFilter($event);
     $this->Auth->allow(['logout']);
   }
-  
+
   public function isAuthorized($user) {
     if (in_array($this->request->action, ['edit', 'password', 'sync', 'view', 'waiver'])) {
       if (isset($user['id']) && $user['id'] == $this->request->pass[0]) {
         return true;
       }
-      
+
       if (isset($user['children'])) {
         foreach ($user['children'] as $child) {
           if ($child['id'] == $this->request->pass[0]) {
@@ -27,7 +27,7 @@ class UsersController extends AppController {
         }
       }
     }
-    
+
     if (in_array($this->request->action, ['add'])) {
       if (isset($user['badges'])) {
         foreach ($user['badges'] as $badge) {
@@ -37,13 +37,13 @@ class UsersController extends AppController {
         }
       }
     }
-    
+
     if (in_array($this->request->action, ['billing'])) {
       if (!empty($user)) {
         return true;
       }
     }
-    
+
     return parent::isAuthorized($user);
   }
 
@@ -52,14 +52,14 @@ class UsersController extends AppController {
       $this->Flash->error(__('An available badge is required to create a new family member account.'));
       return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'home']);
     }
-    
+
     $this->loadModel('Badges');
     $badge = $this->Badges->get($badge_id);
     if (!empty($badge->user_id)) {
       $this->Flash->error(__('An available badge is required to create a new family member account.'));
       return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'home']);
     }
-    
+
     $user = $this->Users->newEntity();
     if ($this->request->is('post')) {
       if (strpos($this->request->data['password'], ' ') > -1 || strlen($this->request->data['password']) < 6) {
@@ -100,10 +100,10 @@ class UsersController extends AppController {
         }
       }
     }
-    
+
     $this->set('user', $user);
   }
-  
+
   public function billing() {
     // Redirect user straight to their WHMCS billing account
     $timestamp = time();
@@ -115,17 +115,17 @@ class UsersController extends AppController {
 
   public function edit($id = null) {
     $user = $this->Users->get($id);
-    
+
     if (empty($user)) {
       $this->Flash->error(__('User not found.'));
       return $this->redirect($this->referer());
     }
-    
+
     if (empty($user->user_id)) {
       $this->Flash->error(__('Primary account holders must edit their accounts through WHMCS.'));
       return $this->redirect($this->referer());
     }
-    
+
     if ($this->request->is('put')) {
       $user = $this->Users->patchEntity($user, $this->request->data);
       if ($this->Users->save($user)) {
@@ -136,15 +136,15 @@ class UsersController extends AppController {
         $this->Flash->error(__('Update failed.'));
       }
     }
-    
+
     $this->set('user', $user);
   }
-  
+
   public function export() {
     $users = $this->Users->find()
       ->contain(['Badges'])
       ->order(['Users.last_name' => 'ASC', 'Users.first_name' => 'ASC']);
-    
+
     $data = [['First Name', 'Last Name', 'Username', 'Email', 'Phone', 'Address', 'Locale', 'Badge', 'Account']];
     foreach ($users as $user) {
       $user_data = [
@@ -156,7 +156,7 @@ class UsersController extends AppController {
         $user->address_1 . ' ' . $user->address_2,
         $user->city . ', ' . $user->state . ' ' . $user->zip,
       ];
-      
+
       if (!empty($user->badge)) {
         if (!empty($user->badge->number)) {
           if ($user->badge->status != 'active') {
@@ -170,16 +170,16 @@ class UsersController extends AppController {
       } else {
         $user_data[] = 'No Badge';
       }
-      
+
       if (empty($user->user_id)) {
         $user_data[] = 'Primary';
       } else {
         $user_data[] = 'Addon';
       }
-      
+
       $data[] = $user_data;
     }
-    
+
     $_serialize = 'data';
 
     $this->viewBuilder()->className('CsvView.Csv');
@@ -188,14 +188,14 @@ class UsersController extends AppController {
 
   public function index() {
     $conditions = [];
-        
+
     if (!empty($_GET['search'])) {
       $terms = explode(' ', $_GET['search']);
       $query = '';
       foreach ($terms as $term) {
         $query .= $term . '|';
       }
-      $query = rtrim($query, '|');  
+      $query = rtrim($query, '|');
       $conditions = [
         'OR' => [
           'Users.first_name REGEXP' => $query,
@@ -205,18 +205,18 @@ class UsersController extends AppController {
         ]
       ];
     }
-    
+
     $this->paginate = ['limit' => 50, 'order' => ['Users.last_name' => 'asc']];
     $users = $this->Users->find()
       ->where($conditions)
       ->contain('Badges');
     $this->set('users', $this->paginate($users));
   }
-  
+
   public function locate() {
     $results = [];
-  
-    if ($this->request->is('post')) {      
+
+    if ($this->request->is('post')) {
       $connection = ConnectionManager::get('whmcs');
       $results = $connection
         ->execute("SELECT id, firstname, lastname, email FROM tblclients WHERE firstname = :first AND lastname = :last", [
@@ -225,11 +225,11 @@ class UsersController extends AppController {
         ])
         ->fetchAll('assoc');
     }
-    
+
     $this->set('results', $results);
   }
 
-  public function login() {    
+  public function login() {
     if ($this->request->is('post')) {
       $user = $this->Auth->identify();
       if ($user) {
@@ -243,7 +243,7 @@ class UsersController extends AppController {
   public function logout() {
     return $this->redirect($this->Auth->logout());
   }
-  
+
   public function migrate($id = null) {
     $connection = ConnectionManager::get('whmcs');
     $whmcsData = $connection
@@ -251,7 +251,7 @@ class UsersController extends AppController {
         'id' =>  $id
       ])
       ->fetchAll('assoc');
-      
+
     if (count($whmcsData) > 0) {
       $username = $connection
         ->execute("SELECT value FROM tblcustomfieldsvalues WHERE relid = :id AND fieldid = 2", [
@@ -259,7 +259,7 @@ class UsersController extends AppController {
         ])
         ->fetchAll('assoc');
       $username = $username[0]['value'];
-         
+
       $user = $this->Users->newEntity();
       $user_data = [
         'first_name' => $whmcsData[0]['firstname'],
@@ -274,11 +274,11 @@ class UsersController extends AppController {
         'zip' => $whmcsData[0]['postcode'],
         'whmcs_user_id' => $whmcsData[0]['id']
       ];
-      
+
       $user = $this->Users->patchEntity($user, $user_data);
       $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       $password = substr(str_shuffle($chars), 0, 16);
-      
+
       if ($this->Users->save($user)) {
         $user->createActiveDirectoryAccount($password);
         $this->Flash->success(__('WHMCS data imported for user. User will need to reset their password in WHMCS in order to access Active Directory as a temporary password has been used to facilitate initial account creation.'));
@@ -288,27 +288,27 @@ class UsersController extends AppController {
           ->first();
         $this->Flash->error(__('Data already exist in Maker Manager for requested client id. Note: In the event that this user had a missing Active Director account the account should now exist. User will need to reset their password in WHMCS in order to access Active Directory as a temporary password has been used to facilitate initial account creation.'));
         $user->createActiveDirectoryAccount($password);
-      }      
+      }
     } else {
       $this->Flash->error(__('No data found in WHMCS for requested client id.'));
     }
-    
+
     return $this->redirect(['controller' => 'Users', 'action' => 'locate']);
   }
-  
+
   public function password($id = null) {
     $user = $this->Users->get($id);
-    
+
     if (empty($user)) {
       $this->Flash->error(__('User not found.'));
       return $this->redirect($this->referer());
     }
-    
+
     if (empty($user->user_id)) {
       $this->Flash->error(__('Primary account holders must change their passwords through WHMCS.'));
       return $this->redirect($this->referer());
     }
-    
+
     if ($this->request->is('put')) {
       if (strpos($this->request->data['password'], ' ') > -1 || strlen($this->request->data['password']) < 6) {
         $this->Flash->error(__('Password change failed. Passwords must be 6 characters or more and not include spaces.'));
@@ -317,23 +317,23 @@ class UsersController extends AppController {
         $this->Flash->success(__('Password change successful.'));
       }
     }
-    
+
     $this->set('user', $user);
   }
-  
+
   public function sync($id = null) {
     $user = $this->Users->get($id, [
       'contain' => ['Badges', 'Children']
     ]);
-    
+
     if (empty($user)) {
       $this->Flash->error(__('User not found.'));
       return $this->redirect($this->referer());
     }
-        
+
     $connection = ConnectionManager::get('whmcs');
     $subscriptions = $connection->execute("SELECT * FROM tblhosting WHERE domainstatus = 'active' AND userid = $user->whmcs_user_id")->fetchAll('assoc');
-    
+
     if (count($subscriptions) > 0) {
       // Synchronize primary subscription data
       if (empty($user->badge)) {
@@ -350,18 +350,18 @@ class UsersController extends AppController {
       }
       $user->enableActiveDirectoryAccount();
       $this->Users->save($user);
-      
+
       // Synchronize family addon data
       $subscriptionId = $subscriptions[0]['id'];
       $addons = $connection->execute("SELECT * FROM tblhostingaddons WHERE status = 'active' AND hostingid = $subscriptionId")->fetchAll('assoc');
-      
+
       if (count($addons) > 0) {
         $badgesTable = TableRegistry::get('Badges');
         $badgesQuery = $badgesTable->find()
           ->where(['whmcs_user_id' => $user->whmcs_user_id])
           ->find('all');
         $badges = $badgesQuery->toArray();
-        
+
         print_r($addons);
         foreach ($addons as $addon) {
           $exists = false;
@@ -371,7 +371,7 @@ class UsersController extends AppController {
               break;
             }
           }
-          
+
           if (!$exists) {
             $badge = $badgesTable->newEntity();
             $badge_data = [
@@ -385,42 +385,42 @@ class UsersController extends AppController {
           }
         }
       }
-      
+
       $this->Flash->success(__('Subscription found. Data successfully synced from WHMCS.'));
     } else {
       $this->Flash->error(__('No active subscription found to sync from WHMCS.'));
     }
-    
+
     return $this->redirect(['controller' => 'Users', 'action' => 'view', $id]);
   }
 
   public function view($id = null) {
     $user = $this->Users->get($id);
-    
+
     if (empty($user)) {
       $this->Flash->error(__('User not found.'));
       return $this->redirect($this->referer());
     }
-    
+
     $family_accounts = $this->Users->find()
       ->where(['user_id' => $user->id]);
-    
+
     $this->loadModel('Badges');
     $associated_badges = $this->Badges->find()
       ->where(['Badges.whmcs_user_id' => $user->whmcs_user_id])
       ->contain('Users');
-      
+
     $this->set('user', $user);
     $this->set('family_accounts', $family_accounts);
     $this->set('associated_badges', $associated_badges);
   }
-  
+
   public function waiver($id = null) {
     $user = $this->Users->get($id);
-    
+
     if ($this->request->is('post')) {
       $this->loadComponent('Smartwaiver');
-      $waiver_id = $this->Smartwaiver->check($user->last_name, $this->request->data['email']);
+      $waiver_id = $this->Smartwaiver->check($user->first_name, $user->last_name, $this->request->data['email']);
 
       if (!empty($waiver_id)) {
         $user->waiver_id = $waiver_id;
@@ -431,7 +431,7 @@ class UsersController extends AppController {
         $this->Flash->error(__('No waiver found that matches this user and email address') . $this->request->data['email'] . '. ' . __('You can fill out a waiver again at any of the kiosks and try again.'));
       }
     }
-    
+
     $this->set('user', $user);
   }
 }
