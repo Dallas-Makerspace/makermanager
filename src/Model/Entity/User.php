@@ -42,6 +42,15 @@ class User extends Entity {
   
   // Bind to Active Directory over LDAP
   protected function _ldapBind() {
+   /**
+    * Note on secure connections to Active Directory
+    * ----------------------------------------------
+    * LDAPS connection attempts failed, so flipped back to LDAP connections for the moment.
+    * LDAPS connections will need to be turned back on and tested before re-enabling LDAPS for Maker Manager.
+    *
+    * - Eric
+    */
+    
     //$ldap = ldap_connect('ldap://' . Configure::read('ActiveDirectory.domain'), 389);
     $ldap = ldap_connect('ldaps://' . Configure::read('ActiveDirectory.domain'), 636);
     ldap_set_option($ldap, LDAP_OPT_PROTOCOL_VERSION, 3);
@@ -113,7 +122,7 @@ class User extends Entity {
     if (!empty($attributes["exchange_deliverandredirect"])){ $mod["deliverAndRedirect"][0]=$attributes["exchange_deliverandredirect"]; }    
     if (!empty($attributes["exchange_hidefromlists"])){ $mod["msExchHideFromAddressLists"][0]=$attributes["exchange_hidefromlists"]; }
     if (!empty($attributes["contact_email"])){ $mod["targetAddress"][0]=$attributes["contact_email"]; }
-    if (count($mod)==0){ return (false); }
+    if (count($mod)==0){ return (false); }    
     return ($mod);
   }
   
@@ -148,6 +157,42 @@ class User extends Entity {
     return $val;
   }
   
+  protected function _satisfyRequiredData($user) {
+    /**
+     * Double check that required data is present
+     * ----------------------------------------------
+     * Some registration data from WHMCS has come in incomplete. I assume this is
+     * some legacy data that didn't have stricter or required checks previously.
+     * Placeholder data is added as needed to satisfy AD account data calls to
+     * keep things moving smoothly.
+     *
+     * Many of these data points are required on the Maker Manager side before
+     * the AD creation or update process happens.
+     *
+     * - Eric
+     */
+    
+    $check_keys = [
+        'firstname' => 'MISSING FIRST',
+        'surname' => 'MISSING LAST',
+        'display_name' => 'MISSING DISPLAY NAME',
+        'email' => 'MISSINGEMAIL@dallasmakerspace.org',
+        'address_street' => 'MISSING ADDRESS DATA',
+        'address_city' => 'Carrollton',
+        'address_state' => 'TX',
+        'address_code' => '75006',
+        'telephone' => '2146996537'
+    ];
+    
+    foreach ($check_keys as $key => $value) {
+      if (empty($user[$key])) {
+        $user[$key] = $value;
+      }
+    }
+     
+    return $user;
+  }
+  
   public function assignMembersGroup() {
     $ldap = $this->_ldapBind();
     
@@ -177,32 +222,46 @@ class User extends Entity {
         $result = ldap_search($ldap, Configure::read('ActiveDirectory.dcString'), $filter);
         $data = ldap_get_entries($ldap, $result);
         
+        /**
+         * Trimming all passed data
+         * ----------------------------------------------
+         * WHMCS doesn't seem to trim data entered into the forms so trimming is done below
+         * to make sure that Active Directory will accept all passed data. 
+         *
+         * Specifically, Active Directory was failing to create accounts with usernames passed
+         * from WHMCS with a space after the username.
+         *
+         * - Eric
+         */
+        
         if ($data['count'] == 0) {
           $new_user = [
-            'description' => $this->whmcs_user_id,
+            'description' => trim($this->whmcs_user_id),
             'change_password' => 0,
             'enabled' => 0,
-            'display_name' => $this->first_name . ' ' . $this->last_name,
-            'firstname' => $this->first_name,
-        	'surname' => $this->last_name,
-        	'email' => $this->email,
-        	'address_street' => $this->address_1 . ' ' . $this->address_2,
-        	'address_city' => $this->city,
-        	'address_state' => $this->state,
-        	'address_code' => $this->zip,
-        	'telephone' => $this->phone,
+            'display_name' => trim($this->first_name) . ' ' . trim($this->last_name),
+            'firstname' => trim($this->first_name),
+        	'surname' => trim($this->last_name),
+        	'email' => trim($this->email),
+        	'address_street' => trim(trim($this->address_1) . ' ' . trim($this->address_2)),
+        	'address_city' => trim($this->city),
+        	'address_state' => trim($this->state),
+        	'address_code' => trim($this->zip),
+        	'telephone' => trim($this->phone),
         	'container' => array('Members'),
-        	'username' => $this->username,
-        	'logon_name' => $this->username . "@dms.local",
+        	'username' => trim($this->username),
+        	'logon_name' => trim($this->username) . "@dms.local",
         	'password' => $password
           ];
           
+          $new_user = $this->_satisfyRequiredData($new_user);
+                    
           if (!empty($this->whmcs_addon_id)) {
             $update_user['description'] .= '-' . $this->whmcs_addon_id;
           }
           
           $adding_user = $this->_ldapSchema($new_user);
-          $adding_user['cn'][0] = $new_user['display_name'];
+          $adding_user['cn'][0] = $new_user['display_name'] . trim($this->whmcs_user_id);
           $adding_user['samaccountname'][0] = $new_user['username'];
           $adding_user['objectclass'][0] = 'top';
           $adding_user['objectclass'][1] = 'person';
@@ -215,7 +274,7 @@ class User extends Entity {
           $new_user['container'] = array_reverse($new_user['container']);
           $container = 'OU=' . implode(', OU=', $new_user['container']);
           
-          $result = @ldap_add($ldap, 'CN=' . $adding_user['cn'][0] . ', ' . $container . ',' . Configure::read('ActiveDirectory.dcString'), $adding_user);
+          $result = @ldap_add($ldap, 'CN=' . $adding_user['cn'][0] . ',' . $container . ',' . Configure::read('ActiveDirectory.dcString'), $adding_user);
           
           if ($result != true && !$silent) {
             Log::error('Active Directory account creation failed. App id: ' . $this->id . ', WHMCS id: ' . $this->whmcs_user_id, ['scope' => ['activeDirectory']]);
@@ -325,17 +384,19 @@ class User extends Entity {
       
       if ($data['count'] > 0) {
         $update_user = [
-          'description' => $this->whmcs_user_id,
-          'display_name' => $this->first_name . ' ' . $this->last_name,
-          'firstname' => $this->first_name,
-      		'surname' => $this->last_name,
-      		'email' => $this->email,
-      		'address_street' => $this->address_1 . ' ' . $this->address_2,
-      		'address_city' => $this->city,
-      		'address_state' => $this->state,
-      		'address_code' => $this->zip,
-      		'telephone' => $this->phone,
+          'description' => trim($this->whmcs_user_id),
+          'display_name' => trim($this->first_name) . ' ' . trim($this->last_name),
+          'firstname' => trim($this->first_name),
+      	  'surname' => trim($this->last_name),
+      	  'email' => trim($this->email),
+      	  'address_street' => trim($this->address_1) . ' ' . trim($this->address_2),
+      	  'address_city' => trim($this->city),
+      	  'address_state' => trim($this->state),
+      	  'address_code' => trim($this->zip),
+      	  'telephone' => trim($this->phone),
         ];
+        
+        $update_user = $this->_satisfyRequiredData($update_user);
         
         if (!empty($this->whmcs_addon_id)) {
           $update_user['description'] .= '-' . $this->whmcs_addon_id;
@@ -387,6 +448,10 @@ class User extends Entity {
       $filter = "(sAMAccountName=$this->username)";
       $result = ldap_search($ldap, Configure::read('ActiveDirectory.dcString'), $filter, ['cn']);
       $data = ldap_get_entries($ldap, $result);
+      
+      if (empty($badge_number)) {
+          $badge_number = '0000000';
+      }
       
       if ($data['count'] > 0) {
         $updated_user = $this->_ldapSchema(['employee_id' => $badge_number]);
