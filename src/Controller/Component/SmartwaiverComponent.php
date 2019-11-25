@@ -3,37 +3,54 @@ namespace App\Controller\Component;
 
 use Cake\Controller\Component;
 use Cake\Core\Configure;
+use Cake\Network\Http\Client;
 
 class SmartwaiverComponent extends Component {
-  private function _queryApi($options = array()) {
-    $authorized_call = 'https://www.smartwaiver.com/api/v3/?rest_request=' . Configure::read('Smartwaiver.authorization');
-    
-    foreach ($options as $key => $value) {
-      $authorized_call .= '&' . $key . '=' . $value;
+    private $http;
+    private $options;
+
+    private function initialize()
+    {
+        // Setup an HTTP Client and configure it to use our API key for all requests
+        $this->http = new Client();
+        $this->options = [
+            'type' => 'json',
+            'headers' => [
+                'sw-api-key' => Configure::read('Smartwaiver.v4_apikey')
+            ]
+        ];
     }
-    
-    $api_result = simplexml_load_file($authorized_call);
-    
-    if (isset($api_result->participants)) {
-      return $api_result->participants;
-    }
-    
-    return false;
-  }
-  
-  public function check($last_name = '', $email = '') {
-    if (!empty($last_name) && !empty($email)) {
-      $results = $this->_queryApi(['rest_request_lastname' => $last_name]);
-      
-      if ($results) {  
-        foreach ($results->participant as $result) {
-          if ($result->primary_email == $email) {
-            return (string) $result->waiver_id;
-          }
+
+    public function check($first_name, $last_name, $email) {
+        // Grab a list of waivers that match verified=true AND firstName AND lastName
+        $list_response = $this->http->get(
+            "https://api.smartwaiver.com/v4/waivers?limit=100&verified=true&firstName={$first_name}&lastName={$last_name}",
+            [], // We don't need to send anything in the body
+            $this->options // Use our preset headers and API key
+        );
+        if (!$list_response || empty($list_response['waivers'])) {
+            // Nothing found, fail out
+            return false;
         }
-      }
+
+        // For each of the listed waivers, we need to check to see if the specific one we want is there
+        foreach ($list_response['waivers'] as $waiver) {
+            //
+            $waiver_response = $this->http->get(
+                "https://api.smartwaiver.com/v4/waivers/{$waiver['waiverId']}?pdf=false",
+                [], // We don't need to send anything in the body
+                $this->options // Use our preset headers and API key
+            );
+
+            // If the request worked and we have something in the email field and the email matches
+            if (!empty($waiver_response['waiver']['email']) && $waiver_response['waiver']['email'] == $email) {
+                return true;
+            }
+
+            // We didn't find their email, so the loop continues on
+        }
+
+        // We didn't find a matching waiver
+        return false;
     }
-    
-    return false;
-  }
 }

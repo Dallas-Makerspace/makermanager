@@ -8,13 +8,13 @@ class BadgesController extends AppController {
   public function beforeFilter(Event $event) {
     parent::beforeFilter($event);
   }
-  
+
   public function isAuthorized($user) {
     if (in_array($this->request->action, ['users'])) {
       if (isset($user['id']) && $user['id'] == $this->request->pass[0]) {
         return true;
       }
-      
+
       if (isset($user['children'])) {
         foreach ($user['children'] as $child) {
           if ($child['id'] == $this->request->pass[0]) {
@@ -23,7 +23,7 @@ class BadgesController extends AppController {
         }
       }
     }
-    
+
     if (in_array($this->request->action, ['assign', 'revoke'])) {
       if (isset($user['badges'])) {
         foreach ($user['badges'] as $badge) {
@@ -33,7 +33,7 @@ class BadgesController extends AppController {
         }
       }
     }
-    
+
     return parent::isAuthorized($user);
   }
 
@@ -49,7 +49,7 @@ class BadgesController extends AppController {
         $this->request->data['user_id'] = 0;
         $this->request->data['status'] = 'unassigned';
         $badge = $this->Badges->patchEntity($badge, $this->request->data);
-        
+
         if ($this->Badges->save($badge)) {
           return $this->redirect(['controller' => 'Badges', 'action' => 'edit', $badge->id]);
         } else {
@@ -57,7 +57,7 @@ class BadgesController extends AppController {
         }
       }
     }
-    
+
     $this->set('badge', $badge);
   }
 
@@ -67,13 +67,13 @@ class BadgesController extends AppController {
       $this->Flash->error(__('Badge is already assigned.'));
       return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'home']);
     }
-    
+
     $this->loadModel('Users');
     if ($this->request->is('post')) {
       $user = $this->Users->find()
         ->where(['id' => $this->request->data['user_id'], 'whmcs_user_id' => $badge->whmcs_user_id])
         ->first();
-        
+
       if (!empty($user)) {
         $badge = $this->Badges->patchEntity($badge, ['user_id' => $user->id]);
         $this->Badges->save($badge);
@@ -86,78 +86,78 @@ class BadgesController extends AppController {
         $this->Flash->success(__('Badge could not be assigned to user, WHMCS data mismatch.'));
       }
     }
-    
+
     $family_query = $this->Users->find()
       ->where(['Users.whmcs_user_id' => $badge->whmcs_user_id, 'Users.user_id IS NOT NULL'])
       ->contain('Badges');
-    
+
     $family_members = [];
     foreach ($family_query as $family_member) {
       if (empty($family_member->badge)) {
         $family_members[$family_member->id] = $family_member->first_name . ' ' . $family_member->last_name;
       }
     }
-    
+
     $this->set('badge', $badge);
     $this->set('family_members', $family_members);
   }
-  
+
   public function delete($id = null) {
     $badge = $this->Badges->get($id);
-    
+
     if (empty($badge) || $badge->whmcs_user_id != 0) {
       $this->Flash->error(__('Requested one off badge was not found.'));
       return $this->redirect($this->referer());
     }
-    
+
     $this->loadModel('BadgeHistories');
     $associated_id = $badge->id;
-    
+
     $this->Badges->patchEntity($badge, ['status' => 'unassigned']);
     $this->Badges->save($badge);
     $this->Badges->delete($badge);
     $this->BadgeHistories->deleteAll(['badge_id' => $associated_id]);
-    
+
     $this->Flash->success(__('Badge deleted.'));
     return $this->redirect(['controller' => 'Pages', 'action' => 'display', 'home']);
   }
-  
+
   public function disable($id = null, $reason = 0) {
     $reason = min(max($reason, 0), 3);
-    
+
     $reasons = [
       0 => 'Disabled by admin',
       1 => 'Lost',
       2 => 'Damaged',
       3 => 'Other'
     ];
-    
+
     $badge = $this->Badges->get($id);
-    
+
     if (empty($badge)) {
       $this->Flash->error(__('Requested badge was not found.'));
       return $this->redirect($this->referer());
     }
-    
+
     if ($badge->whmcs_user_id == 0) {
       $badge->disable($reasons[$reason]);
       $this->Badges->save($badge);
       $this->Flash->success(__('Badge disabled.'));
     } else {
-      
+
     }
-    
+
     return $this->redirect($this->referer());
   }
 
   public function edit($id = null) {
     $badge = $this->Badges->get($id);
-    
+
     if (empty($badge) || $badge->whmcs_user_id != 0) {
       $this->Flash->error(__('Requested one off badge was not found.'));
       return $this->redirect($this->referer());
     }
-    
+
     if ($this->request->is('put')) {
       if (empty($this->request->data['description'])) {
         $this->Flash->error(__('A description is required for one off badges.'));
@@ -171,36 +171,36 @@ class BadgesController extends AppController {
         }
       }
     }
-    
+
     $this->set('badge', $badge);
   }
-  
+
   public function enable($id = null) {
     $badge = $this->Badges->get($id);
-    
+
     if (empty($badge)) {
       $this->Flash->error(__('Requested badge was not found.'));
       return $this->redirect($this->referer());
     }
-    
+
     if ($badge->whmcs_user_id == 0) {
       $badge->enable('Enabled by admin');
       $this->Badges->save($badge);
       $this->Flash->success(__('Badge enabled.'));
     } else {
-      
+
     }
-    
+
     return $this->redirect($this->referer());
   }
-  
+
   public function index($list = null) {
     $this->paginate = [
       'contain' => ['Users'],
       'sortWhitelist' => ['Users.first_name', 'Users.last_name', 'Users.username', 'Users.email', 'description', 'number', 'status'],
       'order' => ['Users.last_name' => 'asc']
     ];
-    
+
     $type = 'all';
     $conditions = ['Badges.user_id IS NOT NULL'];
     if (!empty($list)) {
@@ -213,7 +213,7 @@ class BadgesController extends AppController {
         $type = 'One Off';
       }
     }
-    
+
     if (!empty($_GET['search'])) {
       $terms = explode(' ', $_GET['search']);
       $query = '';
@@ -233,18 +233,18 @@ class BadgesController extends AppController {
         ]
       ];
     }
-    
+
     $badges = $this->Badges->find()
       ->where($conditions)
       ->contain('Users');
     $this->set('badges', $this->paginate($badges));
     $this->set('type', ucwords($type));
   }
-  
+
   // Revoke badge privledge from a family member account
   public function revoke($id = null) {
     $badge = $this->Badges->get($id);
-    
+
     if (!empty($badge)) {
       $this->loadModel('Users');
       $user = $this->Users->get($badge->user_id);
@@ -260,23 +260,23 @@ class BadgesController extends AppController {
       return $this->redirect($this->referer());
     }
   }
-  
+
   public function suspend($id = null) {
     $badge = $this->Badges->get($id);
-    
+
     if (empty($badge)) {
       $this->Flash->error(__('Requested badge was not found.'));
       return $this->redirect($this->referer());
     }
-    
+
     if ($badge->whmcs_user_id == 0) {
       $badge->suspend('Suspended by admin');
       $this->Badges->save($badge);
       $this->Flash->success(__('Badge suspended.'));
     } else {
-      
+
     }
-    
+
     return $this->redirect($this->referer());
   }
 
@@ -286,7 +286,7 @@ class BadgesController extends AppController {
       $badge = $this->Badges->find()
         ->where(['user_id' => $user_id])
         ->first();
-  
+
       if (!empty($this->request->data['disable'])) {
         // Disabling badge
         $badge->disable($this->request->data['disable']);
@@ -306,26 +306,26 @@ class BadgesController extends AppController {
         }
       }
     }
-    
+
     $this->loadModel('Users');
     $user = $this->Users->find()
       ->where(['Users.id' => $user_id])
       ->contain('Badges')
       ->first();
-    
+
     // No waiver on file for user, look it up or forward to more info
     if (empty($user->waiver_id)) {
       $this->loadComponent('Smartwaiver');
-      $waiver_id = $this->Smartwaiver->check($user->last_name, $user->email);
-      
+      $waiver_id = $this->Smartwaiver->check($user->first_name, $user->last_name, $user->email);
+
       if (!$waiver_id) {
         return $this->redirect(['controller' => 'Users', 'action' => 'waiver', $user_id]);
       }
-      
+
       $user->waiver_id = $waiver_id;
       $this->Users->save($user);
     }
-        
+
     $this->set('user', $user);
   }
 }
