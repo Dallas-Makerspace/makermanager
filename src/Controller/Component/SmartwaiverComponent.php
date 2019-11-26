@@ -9,7 +9,7 @@ class SmartwaiverComponent extends Component {
     private $http;
     private $options;
 
-    private function initialize()
+    public function initialize()
     {
         // Setup an HTTP Client and configure it to use our API key for all requests
         $this->http = new Client();
@@ -28,22 +28,24 @@ class SmartwaiverComponent extends Component {
             [], // We don't need to send anything in the body
             $this->options // Use our preset headers and API key
         );
-        if (!$list_response || empty($list_response['waivers'])) {
+        $waivers = $list_response->json;
+        if (!$waivers || empty($waivers['waivers'])) {
             // Nothing found, fail out
             return false;
         }
 
         // For each of the listed waivers, we need to check to see if the specific one we want is there
-        foreach ($list_response['waivers'] as $waiver) {
-            //
+        foreach ($waivers['waivers'] as $waiver) {
             $waiver_response = $this->http->get(
                 "https://api.smartwaiver.com/v4/waivers/{$waiver['waiverId']}?pdf=false",
                 [], // We don't need to send anything in the body
                 $this->options // Use our preset headers and API key
             );
 
+            $waiver_json = $waiver_response->json;
+
             // If the request worked and we have something in the email field and the email matches
-            if (!empty($waiver_response['waiver']['email']) && $waiver_response['waiver']['email'] == $email) {
+            if (!empty($waiver_json['waiver']['email']) && $waiver_json['waiver']['email'] == $email) {
                 return true;
             }
 
