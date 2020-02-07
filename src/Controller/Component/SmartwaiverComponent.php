@@ -46,7 +46,7 @@ class SmartwaiverComponent extends Component {
 
             // If the request worked and we have something in the email field and the email matches
             if (!empty($waiver_json['waiver']['email']) && $waiver_json['waiver']['email'] == $email) {
-                return true;
+                return $waiver['waiverId'];
             }
 
             // We didn't find their email, so the loop continues on
