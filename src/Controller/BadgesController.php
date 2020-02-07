@@ -318,7 +318,7 @@ class BadgesController extends AppController {
       $this->loadComponent('Smartwaiver');
       $waiver_id = $this->Smartwaiver->check($user->first_name, $user->last_name, $user->email);
 
-      if (!$waiver_id) {
+      if (empty($waiver_id)) {
         return $this->redirect(['controller' => 'Users', 'action' => 'waiver', $user_id]);
       }
 
