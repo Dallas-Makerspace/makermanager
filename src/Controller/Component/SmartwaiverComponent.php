@@ -52,6 +52,7 @@ class SmartwaiverComponent extends Component {
 
             // If the request worked and we have something in the email field and the email matches
             if (!empty($waiver_json['waiver']['email']) && strtolower($waiver_json['waiver']['email']) == strtolower($email)) {
+                Log::write('error', "Found a waiver: first_name='{$first_name}' last_name='{$last_name}' email='{$email}' waiver_email='{$waiver_json['waiver']['email']}' waiver_id={$waiver['waiverId']}");
                 return $waiver['waiverId'];
             }
 
