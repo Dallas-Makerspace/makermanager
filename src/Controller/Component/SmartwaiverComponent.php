@@ -4,6 +4,7 @@ namespace App\Controller\Component;
 use Cake\Controller\Component;
 use Cake\Core\Configure;
 use Cake\Network\Http\Client;
+use Cake\Log\Log;
 
 class SmartwaiverComponent extends Component {
     private $http;
@@ -34,6 +35,7 @@ class SmartwaiverComponent extends Component {
         );
         $waivers = $list_response->json;
         if (!$waivers || empty($waivers['waivers'])) {
+            Log::write('error', "No waiver found for user by first and last: first_name='{$first_name}' last_name='{$last_name}' email='{$email}'");
             // Nothing found, fail out
             return false;
         }
@@ -49,12 +51,19 @@ class SmartwaiverComponent extends Component {
             $waiver_json = $waiver_response->json;
 
             // If the request worked and we have something in the email field and the email matches
-            if (!empty($waiver_json['waiver']['email']) && strcasecmp($waiver_json['waiver']['email'], $email)) {
+            if (!empty($waiver_json['waiver']['email']) && strtolower($waiver_json['waiver']['email']) == strtolower($email)) {
+                Log::write('error', "Found a waiver: first_name='{$first_name}' last_name='{$last_name}' email='{$email}' waiver_email='{$waiver_json['waiver']['email']}' waiver_id={$waiver['waiverId']}");
                 return $waiver['waiverId'];
             }
 
             // We didn't find their email, so the loop continues on
         }
+
+        Log::write(
+            'error',
+            "Found some waivers by first and last, but no matching email: first_name='{$first_name}' last_name='{$last_name}' email='{$email}'\n"
+            . "Waiver response:\n{$list_response->body}"
+        );
 
         // We didn't find a matching waiver
         return false;

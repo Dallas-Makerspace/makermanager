@@ -232,6 +232,8 @@ class UsersController extends AppController {
   public function login() {
     if ($this->request->is('post')) {
       $user = $this->Auth->identify();
+
+
       if ($user) {
         $this->Auth->setUser($user);
         return $this->redirect($this->Auth->redirectUrl());
@@ -416,10 +418,23 @@ class UsersController extends AppController {
   }
 
   public function waiver($id = null) {
+    $this->loadComponent('Smartwaiver');
     $user = $this->Users->get($id);
 
+    if (!empty($user->waiver_id)) {
+        $this->Flash->success(__('Waiver verified.'));
+        return $this->redirect(['controller' => 'Badges', 'action' => 'users', $id]);
+    }
+
+    $waiver_id = $this->Smartwaiver->check($user->first_name, $user->last_name, $user->email);
+    if (!empty($waiver_id)) {
+        $user->waiver_id = $waiver_id;
+        $this->Users->save($user);
+        $this->Flash->success(__('Waiver verified.'));
+        return $this->redirect(['controller' => 'Badges', 'action' => 'users', $id]);
+    }
+
     if ($this->request->is('post')) {
-      $this->loadComponent('Smartwaiver');
       $waiver_id = $this->Smartwaiver->check($user->first_name, $user->last_name, $this->request->data['email']);
 
       if (!empty($waiver_id)) {
