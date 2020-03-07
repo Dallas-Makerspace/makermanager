@@ -7,7 +7,7 @@
     </div>
     <div class="panel-body">
       <?= $this->Flash->render() ?>
-      <p>We were unable to find a waiver that matched the name and email address for this account. If you used a different email address when filling out the waiver then enter it below and we'll attempt to look up your waiver in the system.</p>
+      <p>We were unable to find a waiver that matched the first name (<?= $user->first_name ?>), last name (<?= $user->last_name ?>) and email address (<?= $user->email ?>) for this account. If you used a different email address when filling out the waiver then enter it below and we'll attempt to look up your waiver in the system.</p>
       <?= $this->Form->create(); ?>
         <fieldset>
           <?= $this->Form->input('email', [
