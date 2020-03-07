@@ -418,6 +418,7 @@ class UsersController extends AppController {
   }
 
   public function waiver($id = null) {
+    $this->loadComponent('Smartwaiver');
     $user = $this->Users->get($id);
 
     if (!empty($user->waiver_id)) {
@@ -434,7 +435,6 @@ class UsersController extends AppController {
     }
 
     if ($this->request->is('post')) {
-      $this->loadComponent('Smartwaiver');
       $waiver_id = $this->Smartwaiver->check($user->first_name, $user->last_name, $this->request->data['email']);
 
       if (!empty($waiver_id)) {
