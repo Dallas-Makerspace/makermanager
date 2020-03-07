@@ -51,7 +51,7 @@ class SmartwaiverComponent extends Component {
             $waiver_json = $waiver_response->json;
 
             // If the request worked and we have something in the email field and the email matches
-            if (!empty($waiver_json['waiver']['email']) && strcasecmp($waiver_json['waiver']['email'], $email)) {
+            if (!empty($waiver_json['waiver']['email']) && strtolower($waiver_json['waiver']['email']) == strtolower($email)) {
                 return $waiver['waiverId'];
             }
 
