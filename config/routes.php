@@ -75,6 +75,12 @@ Router::scope('/', function (RouteBuilder $routes) {
       ['user_id' => '\d+', 'pass' => ['user_id']]
     );
 
+    $routes->connect(
+      '/users/:user_id/testing',
+      ['controller' => 'Users', 'action' => 'testing'],
+      ['user_id' => '\d+', 'pass' => ['user_id']]
+    );
+
     /**
      * Connect catchall routes for all controllers.
      *

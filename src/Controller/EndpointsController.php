@@ -113,9 +113,12 @@ class EndpointsController extends AppController {
         'state' => $this->request->data['state'],
         'zip' => $this->request->data['postcode'],
         'whmcs_user_id' => $this->request->data['userid']
-      ];
+];
+  //Attempt to log variable - Freddy
+      Log::error(var_export($this->request->data, true));
+      
 
-      $user = $usersTable->patchEntity($user, $user_data);
+$user = $usersTable->patchEntity($user, $user_data);
       if ($usersTable->save($user)) {
         $user->createActiveDirectoryAccount($this->request->data['password']);
         Log::error('New WHMCS client successfully created in Maker Manager for WHMCS user id ' . $this->request->data['userid'] . '.', ['scope' => ['users']]);

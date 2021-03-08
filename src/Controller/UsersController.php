@@ -14,6 +14,9 @@ class UsersController extends AppController {
   }
 
   public function isAuthorized($user) {
+    if ($this->request->action == 'testing') {
+      return true;
+    }
     if (in_array($this->request->action, ['edit', 'password', 'sync', 'view', 'waiver'])) {
       if (isset($user['id']) && $user['id'] == $this->request->pass[0]) {
         return true;
@@ -448,5 +451,15 @@ class UsersController extends AppController {
     }
 
     $this->set('user', $user);
+  }
+
+  public function testing($id = null) {
+    $this->loadComponent('Smartwaiver');
+    $user = $this->Users->get($id);
+    print('<pre>');
+    print_r($user);
+    print_r($this->Smartwaiver->check($user->first_name, $user->last_name, $user->email));
+    print('</pre>');
+    exit(0);
   }
 }
