@@ -23,13 +23,13 @@ class EndpointsController extends AppController {
 
     $this->autoRender = false;
   }
-  
+
   protected function _sendEmail($message = '', $subject = 'Maker Manager Error Reported', $to_name = 'DMS Back Office', $to_email = 'backoffice@dallasmakerspace.org',  $from_name = 'DMS Maker Manager', $from_email = 'admin@dallasmakerspace.org') {
     Email::configTransport('sparkpost', [
         'className' => 'SparkPost.SparkPost',
         'apiKey' => Configure::read('SparkPost.Api.key')
     ]);
-    
+
     if (!empty($message)) {
       $email = new Email();
       $email->transport('sparkpost');
@@ -80,7 +80,7 @@ class EndpointsController extends AppController {
         $badge->user->disableActiveDirectoryAccount();
         $usersTable->save($badge->user);
       }
-      
+
       $badgeHistories = TableRegistry::get('BadgeHistories');
       $associated_id = $badge->id;
       $badgesTable->delete($badge);
@@ -90,16 +90,35 @@ class EndpointsController extends AppController {
     // Badge not found, but since this addon was cancelled it's inconsequential
     Log::error('WHMCS addon cancellation successfully removed a family member user badge in Maker Manager for user with WHMCS user id ' . $this->request->data['userid'] . ', service id ' . $this->request->data['serviceid'] . ' and addon id ' . $this->request->data['addonid'], ['scope' => ['users']]);
   }
+    public function userAdd(){
+        $usersTable = TableRegistry::get('Users');
+        if($existing_user = $usersTable->find()->where(['whmcs_user_id' => $this->request->data['user_id']])->first())
+        {
+            if (!empty($existing_user)) {
+                // Create a new active directory account, if one didn't previously exist
+                $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                $password = substr(str_shuffle($chars), 0, 16);
+                $existing_user->createActiveDirectoryAccount($password, true);
 
+                $existing_user->changeActiveDirectoryPassword($this->request->data['password']);
+
+                Log::error('WHMCS client successfully changed Active Directory password for WHMCS user id ' . $this->request->data['userid'] . '.', ['scope' => ['users']]);
+            } else {
+                $this->_sendEmail('WHMCS client failed Active Directory password changing in Maker Manager for WHMCS user id ' . $this->request->data['user_id'] . '. WHMCS user not found in Maker Manager.');
+                Log::error('WHMCS client failed Active Directory password changing in Maker Manager for WHMCS user id ' . $this->request->data['user_id'] . '. WHMCS user not found in Maker Manager.', ['scope' => ['users']]);
+            }
+        }
+
+    }
   public function clientAdd() {
     // Create user in App
     $usersTable = TableRegistry::get('Users');
-    
+
     $existing_user = $usersTable->find()
       ->where(['whmcs_user_id' => $this->request->data['userid']])
       ->first();
-      
-    if (empty($existing_user)) {    
+
+    if (empty($existing_user)) {
       $user = $usersTable->newEntity();
       $user_data = [
         'first_name' => $this->request->data['firstname'],
@@ -116,8 +135,6 @@ class EndpointsController extends AppController {
 ];
   //Attempt to log variable - Freddy
       Log::error(var_export($this->request->data, true));
-      
-
 $user = $usersTable->patchEntity($user, $user_data);
       if ($usersTable->save($user)) {
         $user->createActiveDirectoryAccount($this->request->data['password']);
@@ -145,9 +162,9 @@ $user = $usersTable->patchEntity($user, $user_data);
       $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       $password = substr(str_shuffle($chars), 0, 16);
       $user->createActiveDirectoryAccount($password, true);
-      
+
       $user->changeActiveDirectoryPassword($this->request->data['password']);
-      
+
       Log::error('WHMCS client successfully changed Active Directory password for WHMCS user id ' . $this->request->data['userid'] . '.', ['scope' => ['users']]);
     } else {
       $this->_sendEmail('WHMCS client failed Active Directory password changing in Maker Manager for WHMCS user id ' . $this->request->data['userid'] . '. WHMCS user not found in Maker Manager.');
@@ -191,9 +208,9 @@ $user = $usersTable->patchEntity($user, $user_data);
         $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         $password = substr(str_shuffle($chars), 0, 16);
         $user->createActiveDirectoryAccount($password, true);
-        
+
         $user->updateActiveDirectoryAccount();
-        
+
         Log::error('WHMCS client successfully edited in Maker Manager for WHMCS user id ' . $this->request->data['userid'] . '.', ['scope' => ['users']]);
       } else {
         Log::error('WHMCS client failed editing in Maker Manager for WHMCS user id ' . $this->request->data['userid'] . '. Errors in next logged message.', ['scope' => ['users']]);
@@ -213,19 +230,19 @@ $user = $usersTable->patchEntity($user, $user_data);
      * have any ramifications if ditched, but the skeleton method is left commented out
      * below in case it needs to be revived and finished in the future.
      */
-    
+
     /*$post_fields = [
       'action' => 'getinvoice',
       'invoiceid' => $this->request->data['invoiceid']
     ];
 
     $invoice_data = $this->_whmcsApiCall($post_fields);
-    if ($invoice_data['WHMCSAPI']['STATUS'] == 'Paid') {      
+    if ($invoice_data['WHMCSAPI']['STATUS'] == 'Paid') {
       $post_fields = [
         'action' => 'getclientsdomains',
         'clientid' => 1212
       ];
-      
+
       $client_domains = $this->_whmcsApiCall($post_fields);
     }*/
   }
@@ -236,18 +253,18 @@ $user = $usersTable->patchEntity($user, $user_data);
     $user = $usersTable->find()
       ->where(['whmcs_user_id' => $this->request->data['userid']])
       ->first();
-    
+
     if (empty($user)) {
       $this->_sendEmail('WHMCS module creation failed to seed a user badge in Maker Manager for user with WHMCS user id ' . $this->request->data['userid'] . ' and service id ' . $this->request->data['serviceid'] . '. A Maker Manager user with the given WHMCS user id could not be found.');
       Log::error('WHMCS module creation failed to seed a user badge in Maker Manager for user with WHMCS user id ' . $this->request->data['userid'] . ' and service id ' . $this->request->data['serviceid'] . '. A Maker Manager user with the given WHMCS user id could not be found.', ['scope' => ['users']]);
       exit;
     }
-    
+
     // Create a new active directory account, if one didn't previously exist
     $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     $password = substr(str_shuffle($chars), 0, 16);
     $user->createActiveDirectoryAccount($password, true);
-    
+
     // Create a new empty badge and associate it with its user via whmcs_user_id
     $badgesTable = TableRegistry::get('Badges');
     $badge = $badgesTable->newEntity();
@@ -267,10 +284,10 @@ $user = $usersTable->patchEntity($user, $user_data);
       Log::error('WHMCS module creation failed to seed a user badge in Maker Manager for user with WHMCS user id ' . $this->request->data['userid'] . ' and service id ' . $this->request->data['serviceid'] . '. Errors in next logged message.', ['scope' => ['users']]);
       Log::error(var_export($badge->errors(), true), ['scope' => ['users']]);
     }
-    
+
     $user->enableActiveDirectoryAccount();
     $usersTable->save($user);
-    
+
     Log::error('WHMCS module creation successfully seeded a user badge in Maker Manager for user with WHMCS user id ' . $this->request->data['userid'] . ' and service id ' . $this->request->data['serviceid'] . '.', ['scope' => ['users']]);
   }
 
@@ -292,7 +309,7 @@ $user = $usersTable->patchEntity($user, $user_data);
       $user->disableActiveDirectoryAccount();
       $usersTable->save($user);
     }
-    
+
     Log::error('WHMCS module data suspended in AD and MM for WHMCS service id ' . $this->request->data['serviceid'] . '.', ['scope' => ['users']]);
   }
 
@@ -301,7 +318,7 @@ $user = $usersTable->patchEntity($user, $user_data);
     $badgesTable = TableRegistry::get('Badges');
     $badges = $badgesTable->find()
       ->where(['whmcs_service_id' => $this->request->data['serviceid']]);
-      
+
     $badgeHistories = TableRegistry::get('BadgeHistories');
     foreach ($badges as $badge) {
       $badge->suspend('WHMCS Module Terminated');
@@ -319,7 +336,7 @@ $user = $usersTable->patchEntity($user, $user_data);
       $user->disableActiveDirectoryAccount();
       $usersTable->save($user);
     }
-    
+
     Log::error('WHMCS module data terminated in AD and MM for WHMCS service id ' . $this->request->data['serviceid'] . '.', ['scope' => ['users']]);
   }
 
@@ -341,7 +358,7 @@ $user = $usersTable->patchEntity($user, $user_data);
       $user->enableActiveDirectoryAccount();
       $usersTable->save($user);
     }
-    
+
     Log::error('WHMCS module data unsuspended in AD and MM for WHMCS service id ' . $this->request->data['serviceid'] . '.', ['scope' => ['users']]);
   }
 
