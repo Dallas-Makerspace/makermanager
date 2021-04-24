@@ -94,9 +94,6 @@ class EndpointsController extends AppController {
 
 
     public function userAdd(){
-      Log::error('userAdd: called '.microtime());
-      Log::error('Data passed: '.var_export($this->request->data, true));
-
       $usersTable = TableRegistry::get('Users');
       $user = $usersTable->newEntity();
       // prefilling some data because the validator requires it
