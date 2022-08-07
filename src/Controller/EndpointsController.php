@@ -91,70 +91,103 @@ class EndpointsController extends AppController {
     Log::error('WHMCS addon cancellation successfully removed a family member user badge in Maker Manager for user with WHMCS user id ' . $this->request->data['userid'] . ', service id ' . $this->request->data['serviceid'] . ' and addon id ' . $this->request->data['addonid'], ['scope' => ['users']]);
   }
     public function userAdd(){
-        $usersTable = TableRegistry::get('Users');
-        if($existing_user = $usersTable->find()->where(['whmcs_user_id' => $this->request->data['user_id']])->first())
-        {
-            if (!empty($existing_user)) {
-                // Create a new active directory account, if one didn't previously exist
-                $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-                $password = substr(str_shuffle($chars), 0, 16);
-                $existing_user->createActiveDirectoryAccount($password, true);
+      Log::error('userAdd: called '.microtime());
+      Log::error('Data passed: '.var_export($this->request->data, true));
 
-                $existing_user->changeActiveDirectoryPassword($this->request->data['password']);
+      $usersTable = TableRegistry::get('Users');
+      $user = $usersTable->newEntity();
+      // prefilling some data because the validator requires it
+      // data will be updated with clientAdd hook
+      $user->first_name = $this->request->data['firstname'];
+      $user->last_name = $this->request->data['lastname'];
+      $user->username = substr(str_shuffle('abcdefghijklmnopqrstuvwxyz'), 0, 8);
+      $user->email = $this->request->data['email'];
+      $user->whmcs_user_id = $this->request->data['user_id'];
+      $user->whmcs_real_user_id = $this->request->data['user_id'];
+      $user->whmcs_user_id_password = $this->request->data['password'];
+      $user->ad_active = 0;
+      $user->is_admin = 0;
+      $user->kdetest = 1;
 
-                Log::error('WHMCS client successfully changed Active Directory password for WHMCS user id ' . $this->request->data['userid'] . '.', ['scope' => ['users']]);
-            } else {
-                $this->_sendEmail('WHMCS client failed Active Directory password changing in Maker Manager for WHMCS user id ' . $this->request->data['user_id'] . '. WHMCS user not found in Maker Manager.');
-                Log::error('WHMCS client failed Active Directory password changing in Maker Manager for WHMCS user id ' . $this->request->data['user_id'] . '. WHMCS user not found in Maker Manager.', ['scope' => ['users']]);
-            }
-        }
-
+      $user_data = [
+          'first_name' => $this->request->data['firstname'],
+          'last_name' => $this->request->data['lastname'],
+          'username' => $username,
+          'email' => $this->request->data['email'],
+          'phone' => ' ',
+          'address_1' => ' ',
+          'city' => ' ',
+          'state' => ' ',
+          'zip' => ' ',
+          'ad_active' => 0,
+          'is_admin' => 0,
+          'whmcs_user_id' => $this->request->data['user_id'],
+          'whmcs_real_user_id' => $this->request->data['user_id'],
+          'whmcs_user_id_password' => $this->request->data['password']
+      ];
+      //$user = $usersTable->patchEntity($user, $user_data);
+      if ($usersTable->save($user)) {
+          Log::error('userAdd: WHMCS user_id created');
+          Log::error('user_data: '.var_export($user_data, true));
+          Log::error('Data passed: '.var_export($this->request->data, true));
+          Log::error(var_export($user->errors(), true));
+      } else {
+          Log::error('userAdd: WHMCS user_id creation failed');
+          Log::error('user_data: '.var_export($user_data, true));
+          Log::error(var_export($user->getErrors(), true));
+      }
     }
   public function clientAdd() {
     // Create user in App
-    $usersTable = TableRegistry::get('Users');
+    // Hook from WHMCS: https://developers.whmcs.com/hooks-reference/client/#clientadd
+    Log::error('clientAdd: called '.microtime());
+
+
+      $usersTable = TableRegistry::get('Users');
 
     $existing_user = $usersTable->find()
-      ->where(['whmcs_user_id' => $this->request->data['userid']])
+      ->where(['whmcs_real_user_id' => $this->request->data['user_id']])
       ->first();
 
     if (empty($existing_user)) {
-      $user = $usersTable->newEntity();
-      $user_data = [
-        'first_name' => $this->request->data['firstname'],
-        'last_name' => $this->request->data['lastname'],
-        'username' => strtolower($this->request->data['username']),
-        'email' => $this->request->data['email'],
-        'phone' => $this->request->data['phonenumber'],
-        'address_1' => $this->request->data['address1'],
-        'address_2' => $this->request->data['address2'],
-        'city' => $this->request->data['city'],
-        'state' => $this->request->data['state'],
-        'zip' => $this->request->data['postcode'],
-        'whmcs_user_id' => $this->request->data['userid']
-];
-  //Attempt to log variable - Freddy
-      Log::error(var_export($this->request->data, true));
-$user = $usersTable->patchEntity($user, $user_data);
-      if ($usersTable->save($user)) {
-        $user->createActiveDirectoryAccount($this->request->data['password']);
-        Log::error('New WHMCS client successfully created in Maker Manager for WHMCS user id ' . $this->request->data['userid'] . '.', ['scope' => ['users']]);
-      } else {
-        $this->_sendEmail('New WHMCS client failed creation in Maker Manager for WHMCS user id ' . $this->request->data['userid']);
-        Log::error('New WHMCS client failed creation in Maker Manager for WHMCS user id ' . $this->request->data['userid'] . '. Errors in next logged message.', ['scope' => ['users']]);
-        Log::error(var_export($user->errors(), true), ['scope' => ['users']]);
-      }
+        Log::error('clientAdd: WHMCS user_id not in database, can not proceed');
+	Log::error('Data passed: '.var_export($this->request->data, true));
     } else {
-      Log::error('Possible Conflict: New WHMCS client skipped creation in Maker Manager (whmcs_user_id already exists in MM) for WHMCS user id ' . $this->request->data['userid'] . '. Errors in next logged message.', ['scope' => ['users']]);
+        // update record
+        $user_data = [
+            'first_name' => $this->request->data['firstname'],
+            'last_name' => $this->request->data['lastname'],
+            'email' => $this->request->data['email'],
+            'address_1' => $this->request->data['address1'],
+            'address_2' => $this->request->data['address2'],
+            'city' => $this->request->data['city'],
+            'state' => $this->request->data['state'],
+            'zip' => $this->request->data['postcode'],
+            'phone' => $this->request->data['phonenumber'],
+            'username' => strtolower($this->request->data['username']),
+            'ad_active' => 0,
+            'is_admin' => 0,
+            'whmcs_user_id' => $this->request->data['client_id']
+        ];
+        $existing_user = $usersTable->patchEntity($existing_user, $user_data);
+        if ($usersTable->save($existing_user)) {
+            // success
+            $existing_user->createActiveDirectoryAccount($existing_user->whmcs_user_id_password);
+            Log::error('New WHMCS client successfully created in Maker Manager for WHMCS user id ' . $this->request->data['client_id'] . '.', ['scope' => ['users']]);
+        } else {
+            $this->_sendEmail('New WHMCS client failed creation in Maker Manager for WHMCS user id ' . $this->request->data['client_id']);
+            Log::error('New WHMCS client failed creation in Maker Manager for WHMCS user id ' . $this->request->data['client_id'] . '. Errors in next logged message.', ['scope' => ['users']]);
+            Log::error(var_export($usersTable->getErrors(), true), ['scope' => ['users']]);
+        }
     }
+    Log::error(var_export($this->request->data, true));
   }
 
   public function clientChangePassword() {
     // Update user's password in active directory
     $usersTable = TableRegistry::get('Users');
     $user = $usersTable->find()
-      ->where(['whmcs_user_id' => $this->request->data['userid']])
-      ->andWhere(['user_id IS' => null])
+      ->where(['whmcs_user_id' => $this->request->data['clientid']])
       ->first();
 
     if (!empty($user)) {
@@ -165,10 +198,10 @@ $user = $usersTable->patchEntity($user, $user_data);
 
       $user->changeActiveDirectoryPassword($this->request->data['password']);
 
-      Log::error('WHMCS client successfully changed Active Directory password for WHMCS user id ' . $this->request->data['userid'] . '.', ['scope' => ['users']]);
+      Log::error('WHMCS client successfully changed Active Directory password for WHMCS user id ' . $this->request->data['clientid'] . '.', ['scope' => ['users']]);
     } else {
-      $this->_sendEmail('WHMCS client failed Active Directory password changing in Maker Manager for WHMCS user id ' . $this->request->data['userid'] . '. WHMCS user not found in Maker Manager.');
-      Log::error('WHMCS client failed Active Directory password changing in Maker Manager for WHMCS user id ' . $this->request->data['userid'] . '. WHMCS user not found in Maker Manager.', ['scope' => ['users']]);
+      $this->_sendEmail('WHMCS client failed Active Directory password changing in Maker Manager for WHMCS user id ' . $this->request->data['clientid'] . '. WHMCS user not found in Maker Manager.');
+      Log::error('WHMCS client failed Active Directory password changing in Maker Manager for WHMCS user id ' . $this->request->data['clientid'] . '. WHMCS user not found in Maker Manager.', ['scope' => ['users']]);
     }
   }
 

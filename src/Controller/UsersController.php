@@ -6,6 +6,7 @@ use Cake\Core\Configure;
 use Cake\Datasource\ConnectionManager;
 use Cake\Event\Event;
 use Cake\ORM\TableRegistry;
+use Cake\Log\Log;
 
 class UsersController extends AppController {
   public function beforeFilter(Event $event) {
@@ -84,6 +85,7 @@ class UsersController extends AppController {
         ]);
 
         $user = $this->Users->patchEntity($user, $merged_account_data);
+	Log::error($user);
         if ($this->Users->save($user)) {
           $success = $user->createActiveDirectoryAccount($this->request->data['password']);
           if ($success == true) {
