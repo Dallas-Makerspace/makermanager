@@ -288,7 +288,7 @@ class Initial extends AbstractMigration
 
         $table = $this->table('smartwaiver_data');
         $table
-            ->addPrimaryKey([''])
+            // ->addPrimaryKey([''])
             ->addColumn('firstName', 'string', [
                 'default' => null,
                 'limit' => 100,
@@ -466,7 +466,7 @@ class Initial extends AbstractMigration
             ->addColumn('ad_active', 'integer', [
                 'default' => null,
                 'limit' => 4,
-                'null' => false,
+                'null' => true,
             ])
             ->addColumn('whmcs_user_id', 'integer', [
                 'default' => null,
@@ -501,7 +501,7 @@ class Initial extends AbstractMigration
                 'null' => true,
             ])
             ->addColumn('is_admin', 'boolean', [
-                'default' => null,
+                'default' => false,
                 'limit' => null,
                 'null' => false,
             ])
@@ -514,7 +514,7 @@ class Initial extends AbstractMigration
 
         $table = $this->table('vw_UserBadgeNumber');
         $table
-            ->addPrimaryKey([''])
+            // ->addPrimaryKey([''])
             ->addColumn('UserID', 'integer', [
                 'default' => 0,
                 'limit' => 11,

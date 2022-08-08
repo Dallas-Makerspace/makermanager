@@ -395,6 +395,7 @@ class EndpointsController extends AppController {
     Log::error('WHMCS module data unsuspended in AD and MM for WHMCS service id ' . $this->request->data['serviceid'] . '.', ['scope' => ['users']]);
   }
 
+  /*
   private function _whmcsApiCall($post_fields) {
     $post_fields['username'] = Configure::read('Whmcs.username');
     $post_fields['password'] = md5(Configure::read('Whmcs.password'));
@@ -447,4 +448,5 @@ class EndpointsController extends AppController {
 
     return($params);
   }
+  */
 }

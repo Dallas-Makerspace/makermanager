@@ -9,8 +9,8 @@ return [
      * Development Mode:
      * true: Errors and warnings shown.
      */
-    'debug' => filter_var(env('DEBUG', true), FILTER_VALIDATE_BOOLEAN),
-
+    'debug' => filter_var(env('DEBUG', false), FILTER_VALIDATE_BOOLEAN),
+    'isDevelopment' =>filter_var(env('DEBUG', false), FILTER_VALIDATE_BOOLEAN),
     /**
      * Configure basic information about the application.
      *
@@ -40,7 +40,8 @@ return [
         'namespace' => 'App',
         'encoding' => env('APP_ENCODING', 'UTF-8'),
         'defaultLocale' => env('APP_DEFAULT_LOCALE', 'en_US'),
-        'base' => false,
+        'htmlLang' => env('HTML_LANG', 'en'),
+        'base' => false, // env('APP_URL_BASE', false),
         'dir' => 'src',
         'webroot' => 'webroot',
         'wwwRoot' => WWW_ROOT,
@@ -64,7 +65,7 @@ return [
      *   You should treat it as extremely sensitive data.
      */
     'Security' => [
-        'salt' => env('SECURITY_SALT', '__SALT__'),
+        'salt' => env('APP_SECURITY_SALT', '__SALT__'),
     ],
 
     /**
@@ -149,7 +150,7 @@ return [
      *   breathing room to complete logging or error handling.
      */
     'Error' => [
-        'errorLevel' => E_ALL & ~E_DEPRECATED,
+        'errorLevel' => E_ALL & ~E_DEPRECATED  & ~E_USER_DEPRECATED,
         'exceptionRenderer' => 'Cake\Error\ExceptionRenderer',
         'skipLog' => [],
         'log' => true,
@@ -177,16 +178,19 @@ return [
      */
     'EmailTransport' => [
         'default' => [
-            'className' => 'Mail',
-            // The following keys are used in SMTP transports
-            'host' => 'localhost',
-            'port' => 25,
-            'timeout' => 30,
-            'username' => 'user',
-            'password' => 'secret',
+            'className' => 'Smtp',
+            'host' => env('EMAIL_HOST', 'localhost'),
+            'port' => env('EMAIL_PORT', 25),
+            'timeout' => env('EMAIL_TIMEOUT', 30),
+            'username' => env('EMAIL_USERNAME', null),
+            'password' => env('EMAIL_PASSWORD', null),
             'client' => null,
-            'tls' => null,
+            'tls' => filter_var(env('EMAIL_TLS', false), FILTER_VALIDATE_BOOLEAN),
             'url' => env('EMAIL_TRANSPORT_DEFAULT_URL', null),
+        ],
+        'sparkpost' => [
+            'className' => 'SparkPost.SparkPost',
+            'apiKey' => env('SPARKPOST_APIKEY', null),
         ],
     ],
 
@@ -201,10 +205,8 @@ return [
      */
     'Email' => [
         'default' => [
-            'transport' => 'default',
-            'from' => 'you@localhost',
-            //'charset' => 'utf-8',
-            //'headerCharset' => 'utf-8',
+            'transport' => env('EMAIL_USE_TRANSPORT', 'default'),
+            'from' => 'admin@dallasmakerspace.org',
         ],
     ],
 
@@ -219,63 +221,32 @@ return [
             'className' => 'Cake\Database\Connection',
             'driver' => 'Cake\Database\Driver\Mysql',
             'persistent' => false,
-            'host' => 'localhost',
-            /**
-             * CakePHP will use the default DB port based on the driver selected
-             * MySQL on MAMP uses port 8889, MAMP users will want to uncomment
-             * the following line and set the port accordingly
-             */
-            //'port' => 'non_standard_port_number',
-            'username' => 'my_app',
-            'password' => 'secret',
-            'database' => 'my_app',
+            'host' => env('DB_HOST', 'localhost'),
+            'username' => env('DB_USERNAME', 'mysql'),
+            'password' => env('DB_PASSWORD', 'mysql'),
+            'database' => env('DB_DATABASE', 'dms-calendar'),
             'encoding' => 'utf8',
             'timezone' => 'UTC',
             'flags' => [],
             'cacheMetadata' => true,
             'log' => false,
-
-            /**
-             * Set identifier quoting to true if you are using reserved words or
-             * special characters in your table or column names. Enabling this
-             * setting will result in queries built using the Query Builder having
-             * identifiers quoted when creating SQL. It should be noted that this
-             * decreases performance because each query needs to be traversed and
-             * manipulated before being executed.
-             */
             'quoteIdentifiers' => false,
-
-            /**
-             * During development, if using MySQL < 5.6, uncommenting the
-             * following line could boost the speed at which schema metadata is
-             * fetched from the database. It can also be set directly with the
-             * mysql configuration directive 'innodb_stats_on_metadata = 0'
-             * which is the recommended value in production environments
-             */
-            //'init' => ['SET GLOBAL innodb_stats_on_metadata = 0'],
-            
             'url' => env('DATABASE_URL', null),
         ],
-
-        /**
-         * The test connection is used during the test suite.
-         */
-        'test' => [
+        'whmcs' => [
             'className' => 'Cake\Database\Connection',
             'driver' => 'Cake\Database\Driver\Mysql',
             'persistent' => false,
-            'host' => 'localhost',
-            //'port' => 'non_standard_port_number',
-            'username' => 'my_app',
-            'password' => 'secret',
-            'database' => 'test_myapp',
+            'host' => env('WHMCS_DB_HOST', ''),
+            'username' => env('WHMCS_DB_USER', ''),
+            'password' => env('WHMCS_DB_PASS', ''),
+            'database' => env('WHMCS_DB_NAME', ''),
             'encoding' => 'utf8',
             'timezone' => 'UTC',
+            'flags' => [],
             'cacheMetadata' => true,
-            'quoteIdentifiers' => false,
             'log' => false,
-            //'init' => ['SET GLOBAL innodb_stats_on_metadata = 0'],
-            'url' => env('DATABASE_TEST_URL', null),
+            'quoteIdentifiers' => false,
         ],
     ],
 
@@ -287,15 +258,35 @@ return [
             'className' => 'Cake\Log\Engine\FileLog',
             'path' => LOGS,
             'file' => 'debug',
-            'levels' => ['notice', 'info', 'debug'],
-            'url' => env('LOG_DEBUG_URL', null),
+            'rotate' => 10,
+            'size' => 10485760,
+            'levels' => filter_var(env('DEBUG', false), FILTER_VALIDATE_BOOLEAN) ? ['notice', 'info', 'debug'] : [],
         ],
         'error' => [
             'className' => 'Cake\Log\Engine\FileLog',
             'path' => LOGS,
             'file' => 'error',
+            'rotate' => 10,
+            'size' => 10485760,
             'levels' => ['warning', 'error', 'critical', 'alert', 'emergency'],
-            'url' => env('LOG_ERROR_URL', null),
+        ],
+        'user' => [
+            'className' => 'Cake\Log\Engine\FileLog',
+            'path' => LOGS,
+            'file' => 'user',
+            'levels' => [],
+            'rotate' => 10,
+            'size' => 10485760,
+            'scopes' => ['users'],
+        ],
+        'activeDirectory' => [
+            'className' => 'Cake\Log\Engine\FileLog',
+            'path' => LOGS,
+            'file' => 'activeDirectory',
+            'levels' => [],
+            'rotate' => 10,
+            'size' => 10485760,
+            'scopes' => ['activeDirectory'],
         ],
     ],
 
@@ -339,5 +330,48 @@ return [
      */
     'Session' => [
         'defaults' => 'php',
+    ],
+ /**
+     * Endpoint configuration.
+     */
+    'Endpoint' => [
+        'authorization' => env('MM_API_AUTH_KEY','')
+    ],
+    /**
+     * WHMCS API configuration.
+     */
+    'Whmcs' => [
+   // unused     'url' => env
+   //     'username' => env
+   //     'password' => env
+        'login' => env('WHMCS_LOGIN_PAGE', '' ),
+        'login_authorization' => env('WHMCS_LOGIN_AUTH', '' )
+    ],
+    /**
+     * Badge API configuration.
+     */
+    'Badges' => [
+        'url' => env('ACCESSCONTROL_API_URL', ''),
+        'authorization' => env('ACCESSCONTROL_API_KEY', '')
+    ],
+    /**
+     * AD configuration
+     */
+    'ActiveDirectory' => [
+        'account_suffix' => env('AD_SUFFIX','@dms.local'),
+        'admin_username' => env('AD_BIND_UN',''),
+        'admin_password' => env('AD_BIND_PW',''),
+        'username_field' => 'sAMAccountName',
+        'use_tls' => filter_var(env('AD_USE_TLS', true), FILTER_VALIDATE_BOOLEAN),
+        'base_dn' => env('AD_BASE','DC=dev,DC=com'),
+        'domain_controllers' => [env('AD_SERVER','dms.local')]
+    ],
+    /**
+     * Smartwaiver configuration.
+     */
+    'Smartwaiver' => [
+        'authorization' => env('SMARTWAIVER_AUTH'),
+        'v4_apikey' => env('SMARTWAIVER_API_KEY'),
+        'url' => env('SMARTWAIVER_URL')
     ],
 ];
