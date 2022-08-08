@@ -18,6 +18,7 @@ use Cake\Controller\Controller;
 use Cake\Event\Event;
 use Cake\ORM\TableRegistry;
 use \Ceeram\Blame\Controller\BlameTrait;
+use Cake\Core\Configure;
 
 /**
  * Application Controller
@@ -46,10 +47,23 @@ class AppController extends Controller
 
         $this->loadComponent('RequestHandler');
         $this->loadComponent('Flash');
+
+        $auth = [
+            'Ad' => [
+                'config' => [
+                    'username_field' => Configure::read('ActiveDirectory.username_field'),
+                    'base_dn' => Configure::read('ActiveDirectory.base_dn'),
+                    'domain_controllers' => Configure::read('ActiveDirectory.domain_controllers'),
+                    'admin_username' => Configure::read('ActiveDirectory.admin_username'),
+                    'admin_password' => Configure::read('ActiveDirectory.admin_password'),
+                    'account_suffix' => Configure::read('ActiveDirectory.account_suffix'),
+                    'use_tls' => Configure::read('ActiveDirectory.use_tls')
+                ]
+            ]
+        ];
+
         $this->loadComponent('Auth', [
-            'authenticate' => [
-                'Ldap'
-            ],
+            'authenticate' => $auth,
             'authorize' => ['Controller'],
             'loginRedirect' => [
                 'controller' => 'Pages',
@@ -81,8 +95,8 @@ class AppController extends Controller
         ) {
             $this->set('_serialize', true);
         }
-    }   
-    
+    }
+
     public function isAuthorized($user)
     {
         // Full system admin access
@@ -92,7 +106,7 @@ class AppController extends Controller
 
         return false;
     }
-    
+
     public function refreshAuthUser()
     {
         $data = $this->Auth->User();
@@ -121,7 +135,7 @@ class AppController extends Controller
                 }
                 $data['id'] = $user->id;
             }
-            
+
             $this->Auth->setUser($data);
         }
     }
