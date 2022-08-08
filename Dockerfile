@@ -5,23 +5,21 @@ RUN a2enmod rewrite && \
     a2enmod expires && \
     a2enmod headers && \
     a2enmod http2 && \
+    sed -e '/<Directory \/var\/www\/>/,/<\/Directory>/s/AllowOverride None/AllowOverride All/' -i /etc/apache2/apache2.conf && \
     apt-get update && \
     apt-get install -y \
-        mariadb-client \
         curl \
         zip \
         unzip \
-        libfreetype6-dev \
-        libjpeg62-turbo-dev \
-        libmcrypt-dev \
-        libpng12-dev \
         zlib1g-dev \
         libicu-dev \
-        g++ \
-    && docker-php-ext-configure intl \
-    && docker-php-ext-install -j$(nproc) iconv mcrypt intl pdo pdo_mysql mbstring \
-    && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
-    && docker-php-ext-install -j$(nproc) gd
+        g++
+
+ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
+
+RUN chmod +x /usr/local/bin/install-php-extensions && \
+    sync && \
+    install-php-extensions ldap intl zip pdo_mysql openssl
 
 # Install composer
 RUN mkdir /opt/composer && \
@@ -31,10 +29,11 @@ RUN mkdir /opt/composer && \
 
 EXPOSE 80
 
-FROM build as development
-COPY .docker/environment.conf /etc/apache2/conf-enabled/
+FROM build as develop
 
-RUN pecl install xdebug && \
+
+RUN apt update && apt install -y nano mariadb-client curl zip unzip && \
+    pecl install xdebug && \
     docker-php-ext-enable xdebug && \
     echo "TLS_REQCERT never" >> /etc/ldap.conf
 # composer build step should run as script, and docker-compose should mount in code

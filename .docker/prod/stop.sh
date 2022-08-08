@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker-compose --env-file ./.env -f ./calendar/docker-compose.prod.yml -f ./volume-override.yml stop
+docker-compose --env-file ./.env -f ./makermanager/docker-compose.prod.yml stop
