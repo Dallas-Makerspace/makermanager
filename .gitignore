@@ -3,3 +3,5 @@
 /config/app.php
 /tmp/*
 /logs/*
+**/*.lock
+/html

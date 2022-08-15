@@ -37,12 +37,11 @@ $this->prepend('body_attrs', ' class="' . strtolower(implode(' ', [$this->reques
 
   <body <?= $this->fetch('body_attrs') ?>>
     <?= $this->element('Header/default') ?>
-    
+
     <div class="container">
       <?= $this->fetch('content') ?>
     </div>
 
     <?= $this->fetch('script') ?>
-<?= $this->element('Static/mascot') ?>
   </body>
 </html>

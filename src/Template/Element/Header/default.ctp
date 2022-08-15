@@ -11,7 +11,7 @@
     </div>
     <div id="navbar" class="collapse navbar-collapse">
       <?php
-        $auth_user = $this->request->session()->read('Auth.User');        
+        $auth_user = $this->request->session()->read('Auth.User');
         $left_nav = [];
         $dropdown_nav = [];
         $admin_nav = [];
@@ -22,7 +22,7 @@
             'controller' => 'Users',
             'action' => 'logout'
           ]);
-        
+
           if (isset($auth_user['id'])) {
             $my_badge = $this->Html->link(__('My Badge'), [
               'controller' => 'Badges',
@@ -40,10 +40,10 @@
                 'controller' => 'Users',
                 'action' => 'billing'
               ]);
-              
+
               if (count($auth_user['badges']) > 0) {
                 $dropdown_nav[] = $my_badge;
-                
+
                 foreach ($auth_user['children'] as $child) {
                   foreach ($auth_user['badges'] as $badge) {
                     if ($child->id == $badge->user_id) {
@@ -55,7 +55,7 @@
                     }
                   }
                 }
-                
+
                 foreach ($auth_user['badges'] as $badge) {
                   if ($badge->user_id != $auth_user['id']) {
                     if (empty($badge->user_id)) {
@@ -81,9 +81,9 @@
               $left_nav[] = $my_badge;
             }
           }
-          
+
           // Admin users have access to badge management areas
-          if ($auth_user['is_admin']) {
+          if (array_key_exists('is_admin', $auth_user) && $auth_user['is_admin']) {
             $admin_nav = [
               $this->Html->link(__('All Badges'), [
                 'controller' => 'Badges',

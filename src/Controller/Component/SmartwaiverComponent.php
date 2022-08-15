@@ -9,9 +9,14 @@ use Cake\Log\Log;
 class SmartwaiverComponent extends Component {
     private $http;
     private $options;
-
-    public function initialize()
+    private $url;
+    public function initialize($config)
     {
+        parent::initialize($config);
+        $this->url = Configure::read('Smartwaiver.url');
+        if(!str_ends_with($this->url, '/')){
+            $this->url = $this->url . '/';
+        }
         // Setup an HTTP Client and configure it to use our API key for all requests
         $this->http = new Client();
         $this->options = [
@@ -29,7 +34,7 @@ class SmartwaiverComponent extends Component {
 
         // Grab a list of waivers that match verified=true AND firstName AND lastName
         $list_response = $this->http->get(
-            "https://api.smartwaiver.com/v4/waivers?limit=100&firstName={$first_name}&lastName={$last_name}",
+            $this->url . "waivers?limit=100&firstName={$first_name}&lastName={$last_name}",
             [], // We don't need to send anything in the body
             $this->options // Use our preset headers and API key
         );
@@ -43,7 +48,7 @@ class SmartwaiverComponent extends Component {
         // For each of the listed waivers, we need to check to see if the specific one we want is there
         foreach ($waivers['waivers'] as $waiver) {
             $waiver_response = $this->http->get(
-                "https://api.smartwaiver.com/v4/waivers/{$waiver['waiverId']}?pdf=false",
+                $this->url . "waivers/{$waiver['waiverId']}?pdf=false",
                 [], // We don't need to send anything in the body
                 $this->options // Use our preset headers and API key
             );

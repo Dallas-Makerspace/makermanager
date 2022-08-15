@@ -1,31 +1,181 @@
-version: '2'
 services:
-    db:
-        image: mariadb:5.5
-        ports:
-            - "3306:3306"
-        environment:
-          MYSQL_ROOT_PASSWORD: 'cakephp'
-          MYSQL_DATABASE: 'cakephp'
-    app:
-        build: .
-        volumes:
-            - ./logs/cakephp:/www/app/logs
-        links:
-            - db
-        environment:
-          DEBUG: 'true'
-          DB_HOST: 'db' # Leave this as 'db' to utilize MySQL container(s)
-          DB_USERNAME: 'root'
-          DB_PASSWORD: 'cakephp'
-          DB_DATABASE: 'cakephp'
-          DB_SEED: 'DatabaseSeed'
-          VIRTUAL_HOST: 'makermanager.dallasmakerspace.org'
-          EMAIL_HOST: 'localhost'
-          EMAIL_PORT: '25'
-          EMAIL_TIMEOUT: '30'
-          EMAIL_USERNAME: 'user'
-          EMAIL_PASSWORD: 'secret'
-          EMAIL_TLS: 'false'
-          REPO: 'https://github.com/Dallas-Makerspace/makermanager.git'
-          REPO_HOST: 'github.com'
+  traefik:
+    image: "traefik:latest"
+    container_name: "traefik"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik=true
+      - traefik.http.routers.traefik.rule=Host("traefik.docker.localhost")
+      - traefik.http.routers.traefik.service=api@internal
+    ports:
+      # HTTPS / SSL port
+      - "443:443"
+      - "80:80"
+      # The Traefik Web UI port (enabled by api:insecure)
+      - "8899:8080"
+    environment:
+      - TRAEFIK_GLOBAL_SENDANONYMOUSUSAGE=false
+      - TRAEFIK_API_DASHBOARD=true
+      - TRAEFIK_API_INSECURE=true
+      - TRAEFIK_PROVIDERS_DOCKER=true
+      - TRAEFIK_LOG_FORMAT=common
+      - TRAEFIK_ENTRYPOINTS_http_ADDRESS=:80
+      - TRAEFIK_ENTRYPOINTS_http_HTTP_REDIRECTIONS_ENTRYPOINT_TO=https
+      - TRAEFIK_ENTRYPOINTS_http_HTTP_REDIRECTIONS_ENTRYPOINT_SCHEME=https
+      - TRAEFIK_ENTRYPOINTS_https_ADDRESS=:443
+      #- TRAEFIK_LOG_LEVEL=DEBUG
+      #- TRAEFIK_ACCESSLOG=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      main:
+  ldap:
+    extends:
+        file: ./dms-ad-openldap/docker-compose.yml
+        service: openldap
+    networks:
+        main:
+          aliases:
+            - openldap
+  phpldapadmin:
+    extends:
+      file: ./dms-ad-openldap/docker-compose.yml
+      service: phpldapadmin
+    networks:
+      main:
+        aliases:
+          - phpldapadmin
+    links:
+      - ldap
+  mail:
+    image: mailhog/mailhog
+    restart: always
+    ports:
+      - 8025:8025
+    networks:
+      main:
+        aliases:
+          - mail
+  db:
+    image: mariadb:latest
+    ports:
+      - "53306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: 'cakephp'
+      MYSQL_DATABASE: 'dms-makermanager'
+      MYSQL_USER: 'makermanager'
+      MYSQL_PASSWORD: 'makermanager'
+    networks:
+      main:
+        aliases:
+          - db
+  whmcs-db:
+    image: mariadb:latest
+    ports:
+      - "63306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: 'cakephp'
+      MYSQL_DATABASE: 'dms-whmcs'
+      MYSQL_USER: 'makermanager'
+      MYSQL_PASSWORD: 'makermanager'
+    volumes:
+      - ./.docker/dev/whmcs_db_init:/docker-entrypoint-initdb.d
+    networks:
+      main:
+        aliases:
+          - whmcs-db
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    environment:
+      - PMA_ARBITRARY=1
+      #- PMA_HOST=db
+      #- PMA_USER=root
+      #- PMA_PASSWORD=cakephp
+    links:
+      - db
+      - whmcs-db
+    ports:
+      - 8081:80
+    volumes:
+      - /sessions
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.phpmyadmin.tls=true
+      - traefik.http.routers.phpmyadmin.rule=Host("phpmyadmin.docker.localhost")
+    networks:
+      main:
+        aliases:
+          - phpmyadmin
+  smartwaiver:
+    image: mockoon/cli:latest
+    ports:
+      - "9001:80"
+    volumes:
+      - ./.docker/dev/smartwaiver/mock.json:/data:ro
+    command: -d data -p 80
+    networks:
+        main:
+            aliases:
+                - smartwaiver
+  app:
+    build:
+      context: .
+      target: develop
+    volumes:
+      - vendor:/var/www/vendor
+      - logs:/var/www/logs
+      - .:/var/www
+    links:
+      - db
+      - whmcs-db
+    ports:
+      - "8000:80"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.app.tls=true
+      - traefik.http.routers.app.rule=Host("makermanager.docker.localhost")
+    entrypoint: ['/var/www/.docker/wait-for-it.sh', "db:3306", "-s", "-t", "120", "--" ]
+    command: '/var/www/.docker/dev/startup.sh'
+    environment:
+      DEBUG: true
+      DB_HOST: 'db' # Leave this as 'db' to utilize MySQL container(s)
+      DB_USERNAME: 'makermanager'
+      DB_PASSWORD: 'makermanager'
+      DB_DATABASE: 'dms-makermanager'
+      DB_SEED: 'DatabaseSeed'
+      EMAIL_USE_TRANSPORT: 'default' #default, sparkpost
+      EMAIL_HOST: 'mail'
+      EMAIL_PORT: 1025
+      EMAIL_TIMEOUT: 30
+      EMAIL_TLS: false
+      SPARKPOST_APIKEY:
+      AD_SERVER: 'openldap'
+      AD_BASE: 'dc=dms,dc=local'
+      AD_SUFFIX: '@dms.local'
+      AD_BIND_UN: 'cn=admin,dc=dms,dc=local'
+      AD_BIND_PW: 'Adm1n!'
+      AD_USE_TLS: true
+      WHMCS_DB_HOST: 'whmcs-db'
+      WHMCS_DB_USER: 'makermanager'
+      WHMCS_DB_PASS: 'makermanager'
+      WHMCS_DB_NAME: 'dms-whmcs'
+      WHMCS_LOGIN_PAGE:
+      WHMCS_LOGIN_AUTH:
+      SMARTWAIVER_AUTH:
+      SMARTWAIVER_API_KEY: 'asdfasfdasfdasfd'
+      ACCESSCONTROL_API_URL:
+      ACCESSCONTROL_API_KEY: 'asdfasdfasdfasdf'
+      SMARTWAIVER_URL: 'http://smartwaiver/v4' #https://api.smartwaiver.com/v4/
+      MM_API_AUTH_KEY:
+      APP_SECURITY_SALT: '12345'
+      APP_URL_BASE: false
+
+    networks:
+        main:
+            aliases:
+                - app
+networks:
+    main:
+volumes:
+    vendor:
+    logs:
