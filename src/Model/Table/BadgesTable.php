@@ -53,13 +53,16 @@ class BadgesTable extends Table {
         ]
       ])
       ->add('number', [
-        'numeric' => [
-          'rule' => 'numeric',
-          'message' => 'Badge number can only include numbers.'
+        'tenDigitText' => [
+          'rule' => function($value, $context){
+            if ($value === null || $value === '') { return true; }
+            return preg_match('/^\d{10}$/', (string)$value) === 1;
+          },
+          'message' => 'Badge number must be exactly ten digits.'
         ],
         'emptyOrUnique' => [
           'rule' => function($value, $context){
-            if (empty($value)) { return true; }
+            if ($value === null || $value === '') { return true; }
             $count = $this->find()
               ->where(['number' => $value])
               ->count();

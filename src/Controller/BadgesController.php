@@ -9,6 +9,16 @@ class BadgesController extends AppController {
     parent::beforeFilter($event);
   }
 
+  protected function _flashBadgeSaveError($badge, $fallback) {
+    $number_errors = $badge->errors('number');
+    if (!empty($number_errors)) {
+      $this->Flash->error(reset($number_errors));
+      return;
+    }
+
+    $this->Flash->error(__($fallback));
+  }
+
   public function isAuthorized($user) {
     if (in_array($this->request->action, ['users'])) {
       if (isset($user['id']) && $user['id'] == $this->request->pass[0]) {
@@ -53,7 +63,7 @@ class BadgesController extends AppController {
         if ($this->Badges->save($badge)) {
           return $this->redirect(['controller' => 'Badges', 'action' => 'edit', $badge->id]);
         } else {
-          $this->Flash->error(__('Badge could not be created. Please try again.'));
+          $this->_flashBadgeSaveError($badge, 'Badge could not be created. Please try again.');
         }
       }
     }
@@ -167,7 +177,7 @@ class BadgesController extends AppController {
         if ($this->Badges->save($badge)) {
           $this->Flash->success(__('Badge updated.'));
         } else {
-          $this->Flash->error(__('Badge could not be created. Please try again.'));
+          $this->_flashBadgeSaveError($badge, 'Badge could not be created. Please try again.');
         }
       }
     }
@@ -302,7 +312,7 @@ class BadgesController extends AppController {
         if ($this->Badges->save($badge)) {
           $this->Flash->success(__('Badge has been activated.'));
         } else {
-          $this->Flash->error(__('Badge activation failed. Double check your badge number and try again.'));
+          $this->_flashBadgeSaveError($badge, 'Badge activation failed. Double check your badge number and try again.');
         }
       }
     }
