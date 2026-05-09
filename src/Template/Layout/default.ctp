@@ -44,5 +44,24 @@ $this->prepend('body_attrs', ' class="' . strtolower(implode(' ', [$this->reques
 
     <?= $this->fetch('script') ?>
 <?= $this->element('Static/mascot') ?>
+    <script>
+    $('form').each((i,elem)=>{
+        $(elem).on("submit", (evt)=>{
+            $(elem).find('button[type=submit]').each((bI,btn)=>{
+                $(btn).prop('disabled', true);
+            });
+        });
+    });
+    </script>
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-TSBVKCC0GS"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-TSBVKCC0GS');
+</script>
   </body>
 </html>

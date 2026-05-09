@@ -61,7 +61,16 @@ class User extends Entity {
     if ($bind) {
       return $ldap;
     }
-    
+
+   /*
+    * Added error handling below.
+    * Jared Fowkes - 2023-12-30
+    */
+    $error = ldap_error($ldap);
+    $errno = ldap_errno($ldap);
+    error_log("LDAP bind failed for RDN $ldap_rdn: Error $errno: $error");
+    ldap_close($ldap);
+ 
     return false;
   }
   

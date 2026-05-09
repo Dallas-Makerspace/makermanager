@@ -3,6 +3,7 @@ namespace App\Controller;
 
 use App\Controller\AppController;
 use Cake\Event\Event;
+Use Cake\Log\Log;
 
 class BadgesController extends AppController {
   public function beforeFilter(Event $event) {
@@ -195,6 +196,7 @@ class BadgesController extends AppController {
   }
 
   public function index($list = null) {
+
     $this->paginate = [
       'contain' => ['Users'],
       'sortWhitelist' => ['Users.first_name', 'Users.last_name', 'Users.username', 'Users.email', 'description', 'number', 'status'],
