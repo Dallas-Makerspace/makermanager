@@ -59,6 +59,18 @@ class PagesController extends AppController
         if (!empty($path[1])) {
             $subpage = $path[1];
         }
+
+        if ($page == 'home') {
+            $auth_user = $this->Auth->user();
+            if (!empty($auth_user['id'])) {
+                return $this->redirect([
+                    'controller' => 'Badges',
+                    'action' => 'users',
+                    'user_id' => $auth_user['id']
+                ]);
+            }
+        }
+
         $this->set(compact('page', 'subpage'));
 
         try {
