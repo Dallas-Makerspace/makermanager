@@ -44,5 +44,14 @@ $this->prepend('body_attrs', ' class="' . strtolower(implode(' ', [$this->reques
 
     <?= $this->fetch('script') ?>
 <?= $this->element('Static/mascot') ?>
+    <script>
+    $('form').each((i,elem)=>{
+        $(elem).on("submit", (evt)=>{
+            $(elem).find('button[type=submit]').each((bI,btn)=>{
+                $(btn).prop('disabled', true);
+            });
+        });
+    });
+    </script>
   </body>
 </html>
